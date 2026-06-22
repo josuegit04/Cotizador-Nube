@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Cloud y Simulador de Cálculo 1</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="workspace-layout">
+    
+    <div class="sidebar-config">
+        <h2>Configuración</h2>
+        
+        <div class="input-group">
+            <span class="info-label">Clientes Base (Valle):<i class="info-icon">i<span class="tooltip-text">El tráfico mínimo constante diario (ej: la madrugada). Define el origen vertical de la curva.</span></i></span>
+            <input type="number" id="base" value="100" min="0" max="100000000">
+        </div>
+        
+        <div class="input-group">
+            <span class="info-label">Clientes Peak 1:<i class="info-icon">i<span class="tooltip-text">La cantidad más alta de usuarios concurrentes esperada en el primer pico de tráfico del día.</span></i></span>
+            <input type="number" id="peak" value="2000" min="1" max="100000000">
+        </div>
+        
+        <div class="input-group">
+            <span class="info-label">Hora del Peak 1 (0-24):<i class="info-icon">i<span class="tooltip-text">La hora exacta donde ocurrirá el primer pico. Matemáticamente sitúa el primer vértice.</span></i></span>
+            <input type="number" id="hora" value="14" min="0" max="24">
+        </div>
+
+        <button class="btn-toggle-peak" id="btn-add-peak" onclick="toggleSegundoPeak()">+ Agregar Segundo Peak (Opcional)</button>
+        
+        <div id="wrapper-second-peak">
+            <div class="input-group">
+                <span class="info-label">Clientes Peak 2:<i class="info-icon">i<span class="tooltip-text">Tráfico máximo esperado para el segundo momento de alta demanda.</span></i></span>
+                <input type="number" id="peak2" value="3500" min="1" max="100000000">
+            </div>
+            <div class="input-group">
+                <span class="info-label">Hora del Peak 2 (0-24):<i class="info-icon">i<span class="tooltip-text">Hora del segundo pico. Python enlazará ambas curvas de forma continua.</span></i></span>
+                <input type="number" id="hora2" value="20" min="0" max="24">
+            </div>
+        </div>
+
+        <hr style="border:0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <div class="input-group">
+            <span class="info-label">Región Cloud:<i class="info-icon">i<span class="tooltip-text">La ubicación física del Data Center. Sudamérica suele ser más costosa debido a la latencia y enlaces locales.</span></i></span>
+            <select id="region">
+                <option value="us">EE.UU. (x1.0)</option>
+                <option value="eu">Europa (x1.15)</option>
+                <option value="sa">Sudamérica (x1.30)</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <span class="info-label">Base de Datos (GB):<i class="info-icon">i<span class="tooltip-text">Espacio en disco para el motor relacional. Se tarifica mensualmente por GB provisto.</span></i></span>
+            <input type="number" id="db_gb" value="50" min="0" max="100000000">
+        </div>
+        
+        <div class="input-group">
+            <span class="info-label">Ficheros en Buckets:<i class="info-icon">i<span class="tooltip-text">Almacenamiento de objetos masivos independientes (ej: imágenes de usuarios, PDFs).</span></i></span>
+            <select id="buckets"><option value="false">No necesario</option><option value="true">Sí (Tarifa plana)</option></select>
+        </div>
+
+        <div class="input-group">
+            <span class="info-label">Balanceador de Carga:<i class="info-icon">i<span class="tooltip-text">Distribuye las peticiones entre servidores cuando la pendiente (tasa de cambio) se acelera súbitamente.</span></i></span>
+            <select id="loadbalancer"><option value="false">No necesario</option><option value="true">Sí necesario</option></select>
+        </div>
+    </div>
+
+    <div class="main-results">
+        
+        <div class="cloud-cards-row" id="cloud-cards-results"></div>
+        
+        <div class="card">
+            <h3>Optimización de Capacidad Fija (Cálculo de Mínimos)</h3>
+            <p style="color: #666; font-size:14px;">Análisis Marginal: ¿Cuánta capacidad estática compensa el costo financiero frente al riesgo de caída de tráfico?</p>
+            <div class="math-box">
+                <p><b>Función de Costo Total Integrada:</b></p>
+                <div class="math-formula" id="opt-funcion">Calculando...</div>
+                <p><b>Derivada de Costo respecto al tamaño ( C'(x) = 0 ):</b></p>
+                <div class="math-formula" id="opt-derivada">Calculando...</div>
+                <hr style="border:0; border-top: 1px solid #d4ebd5; margin: 15px 0;">
+                <p style="font-size: 18px; font-weight: bold; color: #1a3c45;" id="opt-resultado">Procesando extremos locales...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Modelamiento Continuo de Tráfico</h3>
+            <div class="math-box">
+                <p><b>Ecuación Representativa T(t):</b></p>
+                <div class="math-formula" id="formula-display">Calculando...</div>
+            </div>
+            <canvas id="graficoTrafico" width="400" height="150"></canvas>
+            
+            <div class="slider-container">
+                <label for="tiempo_slider" style="color: #d00000; font-size: 15px;"><b>Análisis de la Recta Tangente en Tiempo Real</b></label>
+                <p style="margin: 10px 0 5px;">Hora evaluada: <span id="hora_seleccionada" style="font-weight: bold; font-size: 20px;">12:00</span></p>
+                <input type="range" id="tiempo_slider" min="0" max="24" step="0.5" value="12">
+                <div class="tangent-data" id="tangente_texto">T'(12) = 0 usuarios/hora</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let miGrafico = null;
+    let tiene2Peaks = false;
+    
+    // Parámetros globales para el cálculo matemático de la tangente local
+    let baseG = 0, P1_G = 0, H1_G = 0, P2_G = 0, H2_G = 0;
+
+    function toggleSegundoPeak() {
+        const wrapper = document.getElementById('wrapper-second-peak');
+        const btn = document.getElementById('btn-add-peak');
+        if (wrapper.style.display === 'block') {
+            wrapper.style.display = 'none';
+            btn.innerText = '+ Agregar Segundo Peak (Opcional)';
+            tiene2Peaks = false;
+        } else {
+            wrapper.style.display = 'block';
+            btn.innerText = '- Quitar Segundo Peak';
+            tiene2Peaks = true;
+        }
+        calcular(); // Re-calcula la estructura al cambiar
+    }
+
+    async function calcular() {
+        // Validación de topes (100 Millones)
+        const inputsMax = ['base', 'peak', 'peak2', 'db_gb'];
+        inputsMax.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && parseInt(el.value) > 100000000) el.value = 100000000;
+        });
+
+        baseG = parseInt(document.getElementById('base').value) || 0;
+        P1_G = parseInt(document.getElementById('peak').value) || 0;
+        H1_G = parseInt(document.getElementById('hora').value) || 0;
+        P2_G = parseInt(document.getElementById('peak2').value) || 0;
+        H2_G = parseInt(document.getElementById('hora2').value) || 0;
+
+        // Pintar gráfico en el navegador inmediatamente
+        renderizarGraficoLocal();
+
+        const payload = {
+            clientes_base: baseG, clientes_peak: P1_G, horas_peak: H1_G,
+            tiene_segundo_peak: tiene2Peaks, clientes_peak2: P2_G, horas_peak2: H2_G,
+            quiere_buckets: document.getElementById('buckets').value === "true",
+            region: document.getElementById('region').value,
+            base_datos_gb: parseInt(document.getElementById('db_gb').value) || 0,
+            quiere_load_balancer: document.getElementById('loadbalancer').value === "true"
+        };
+
+        try {
+            const response = await fetch('http://192.168.101.7:8000/calcular-nube', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            // Render de tarjetas comerciales
+            const row = document.getElementById('cloud-cards-results');
+            row.innerHTML = '';
+            ['AWS', 'GCP', 'Azure'].forEach(n => {
+                const c = data.estimacion_mensual[n];
+                row.innerHTML += `
+                    <div class="cloud-card">
+                        <h4>${n}</h4>
+                        <div class="instance-badge">${c.Instancia}</div>
+                        <ul class="cost-breakdown-list">
+                            <li><span>Cores</span> <span>$${c.Cores.toFixed(2)}</span></li>
+                            <li><span>RAM</span> <span>$${c.RAM.toFixed(2)}</span></li>
+                            <li><span>Base Datos</span> <span>$${c.BaseDatos.toFixed(2)}</span></li>
+                            <li><span>Buckets</span> <span>$${c.Bucket.toFixed(2)}</span></li>
+                            <li><span>Load Balancer</span> <span>$${c.LoadBalancer.toFixed(2)}</span></li>
+                            <li><span>Autoescalado</span> <span>$${c.Autoescalado.toFixed(2)}</span></li>
+                            <li class="total-line"><span>Total</span> <span style="color:#2e7d32">$${c.Total.toFixed(2)}</span></li>
+                        </ul>
+                    </div>`;
+            });
+
+            // Sección de optimización
+            const opt = data.optimizacion;
+            document.getElementById('opt-funcion').innerText = `C(x) = ${opt.ecuacion_costo.replace(/\*\*/g, '^')}`;
+            document.getElementById('opt-derivada').innerText = `C'(x) = ${opt.derivada_costo.replace(/\*\*/g, '^')} = 0`;
+            document.getElementById('opt-resultado').innerText = `Punto crítico ideal: ${opt.usuarios_equilibrio.toLocaleString()} usuarios concurrentes. Se sugieren ${opt.servidores_recomendados} servidores estables.`;
+
+            actualizarTangente();
+        } catch (e) { console.log("Esperando comunicación con main.py..."); }
+    }
+
+    function renderizarGraficoLocal() {
+        const etiquetas = [];
+        const valores = [];
+        
+        let h1 = H1_G, p1 = P1_G, h2 = H2_G, p2 = P2_G;
+        if (tiene2Peaks && h1 > h2) { // Ordenamiento temporal
+            let th = h1; h1 = h2; h2 = th;
+            let tp = p1; p1 = p2; p2 = tp;
+        }
+
+        let mid = (h1 + h2) / 2;
+        let a1 = h1 > 0 ? (p1 - baseG) / Math.pow(h1, 2) : 0;
+        let yM = -a1 * Math.pow((mid - h1), 2) + p1;
+        let a2 = (mid - h2) !== 0 ? (p2 - yM) / Math.pow((mid - h2), 2) : 0;
+
+        if (!tiene2Peaks) {
+            document.getElementById('formula-display').innerText = `T(t) = -${a1.toFixed(2)}(t - ${h1})² + ${p1}`;
+        } else {
+            document.getElementById('formula-display').innerText = `Tramo 1 (t ≤ ${mid.toFixed(1)}): -${a1.toFixed(2)}(t - ${h1})² + ${p1}\nTramo 2 (t > ${mid.toFixed(1)}): -${a2.toFixed(2)}(t - ${h2})² + ${p2}`;
+        }
+
+        for (let t = 0; t <= 24; t++) {
+            etiquetas.push(`${t}:00`);
+            let y = 0;
+            if (!tiene2Peaks) {
+                y = -a1 * Math.pow((t - h1), 2) + p1;
+            } else {
+                y = (t <= mid) ? -a1 * Math.pow((t - h1), 2) + p1 : -a2 * Math.pow((t - h2), 2) + p2;
+            }
+            valores.push(Math.max(0, y));
+        }
+
+        if (miGrafico) miGrafico.destroy();
+        const ctx = document.getElementById('graficoTrafico').getContext('2d');
+        miGrafico = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: etiquetas,
+                datasets: [
+                    { label: 'Curva de Tráfico Continuo', data: valores, borderColor: '#a8d5e2', backgroundColor: 'rgba(168, 213, 226, 0.15)', borderWidth: 3, fill: true, tension: 0.3 },
+                    { label: 'Recta Tangente local', data: [], borderColor: '#ff8fa3', borderDash: [6, 4], borderWidth: 3, pointRadius: 0, fill: false }
+                ]
+            },
+            options: { animation: { duration: 0 }, responsive: true }
+        });
+    }
+
+    function actualizarTangente() {
+        const t = parseFloat(document.getElementById('tiempo_slider').value);
+        document.getElementById('hora_seleccionada').innerText = Math.floor(t) + ':' + (t % 1 === 0.5 ? '30' : '00');
+
+        let h1 = H1_G, p1 = P1_G, h2 = H2_G, p2 = P2_G;
+        if (tiene2Peaks && h1 > h2) {
+            let th = h1; h1 = h2; h2 = th;
+            let tp = p1; p1 = p2; p2 = tp;
+        }
+
+        let mid = (h1 + h2) / 2;
+        let a1 = h1 > 0 ? (p1 - baseG) / Math.pow(h1, 2) : 0;
+        let yM = -a1 * Math.pow((mid - h1), 2) + p1;
+        let a2 = (mid - h2) !== 0 ? (p2 - yM) / Math.pow((mid - h2), 2) : 0;
+
+        let yPunto = 0, m = 0;
+
+        if (!tiene2Peaks) {
+            yPunto = -a1 * Math.pow((t - h1), 2) + p1;
+            m = -2 * a1 * (t - h1); // Derivada de la parábola
+        } else {
+            if (t <= mid) {
+                yPunto = -a1 * Math.pow((t - h1), 2) + p1;
+                m = -2 * a1 * (t - h1);
+            } else {
+                yPunto = -a2 * Math.pow((t - h2), 2) + p2;
+                m = -2 * a2 * (t - h2);
+            }
+        }
+
+        const txt = document.getElementById('tangente_texto');
+        txt.innerText = `Derivada T'(${t.toFixed(1)}) = ${Math.round(m).toLocaleString()} usuarios/hora`;
+        txt.style.color = m > 0 ? "#2e7d32" : (m < 0 ? "#d00000" : "#1a3c45");
+
+        const arrTangente = [];
+        for (let x = 0; x <= 24; x++) {
+            if (x >= t - 5 && x <= t + 5) {
+                arrTangente.push(m * (x - t) + yPunto);
+            } else { arrTangente.push(null); }
+        }
+
+        if (miGrafico) {
+            miGrafico.data.datasets[1].data = arrTangente;
+            miGrafico.update();
+        }
+    }
+
+    // Escuchas reactivas
+    document.querySelectorAll('.sidebar-config input, .sidebar-config select').forEach(el => {
+        el.addEventListener('input', calcular);
+    });
+    document.getElementById('tiempo_slider').addEventListener('input', actualizarTangente);
+
+    window.onload = calcular;
+</script>
+
+</body>
+</html>
